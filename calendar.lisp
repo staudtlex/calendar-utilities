@@ -12,6 +12,8 @@
 ;; and Stewart M. Clamen, Software---Practice & Experience,
 ;; vol. 23, no. 4 (April, 1993), pp. 383--404.
 
+(in-package :calendar-utilities)
+
 ;; This code is in the public domain, but any use of it
 ;; should publically acknowledge its source.
 (defun quotient (m n)

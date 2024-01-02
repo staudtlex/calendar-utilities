@@ -15,10 +15,15 @@
 ;;;; along with this program.  If not, see <https://www.gnu.org/licenses/>.
 ;;;;
 
+(in-package :calendar-utilities)
+
 ;;; Generics
 ;;; convert date-object to input list for calendrical functions
 (defgeneric to-list (date)
   (:documentation "Convert date to list"))
+
+(defun make-list-from-date (date)
+  (to-list date))
 
 ;;; convert calendar dates to absolute (fixed) dates
 (defgeneric absolute-from-date (date)
@@ -315,6 +320,8 @@
                         :day        (nth 2 lst)))
         (t nil)))
 
+(defun make-date-from-list (lst &key calendar)
+  (to-date lst :type calendar))
 
 ;;; Convert absolute dates to calendar dates
 (defun date-from-absolute (absolute-date &key calendar)
@@ -476,7 +483,7 @@
     (format nil "~d ~a ~a" (day date) month-name (year date))))
 
 
-;;; Validate dates
+;;; validate dates
 (defun today ()
   (multiple-value-bind (second minute hour day month year day-of-week dst-p tz)
       (decode-universal-time (get-universal-time))
@@ -546,3 +553,4 @@
       (if (french-leap-year year)
           6
           5)))
+
