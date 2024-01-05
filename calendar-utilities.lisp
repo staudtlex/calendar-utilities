@@ -19,19 +19,24 @@
 
 ;;; Generics
 ;;; convert date-object to input list for calendrical functions
-(defgeneric to-list (date)
-  (:documentation "Convert date to list"))
+(defgeneric to-component-list (date)
+  (:documentation "Extract the date components of DATE into a list. The order of the date components may differ what is shown when calling (PRINT DATE)."))
 
 (defun make-list-from-date (date)
-  (to-list date))
+  (to-component-list date))
 
 ;;; convert calendar dates to absolute (fixed) dates
 (defgeneric absolute-from-date (date)
-  (:documentation "Convert date to absolute (fixed) date"))
+  (:documentation "Convert DATE to absolute (fixed) date"))
+
 
 ;;; Classes
+;;; General date class (from which all other date classes inherit)
+(defclass date () NIL)
+
+
 ;;; General year-month-day class
-(defclass ymd ()
+(defclass ymd (date)
   ((year
     :initarg :year
     :accessor year
@@ -45,7 +50,8 @@
     :accessor day
     :initform 1)))
 
-(defmethod to-list ((date ymd))
+(defmethod to-component-list ((date ymd))
+  "Extract the components of a YMD DATE into a list. The order of the date components is MDY."
   (list (month date) (day date) (year date)))
 
 (defmethod print-object ((x ymd) stream)
@@ -60,11 +66,11 @@
   (make-instance 'gregorian :year year :month month :day day))
 
 (defmethod absolute-from-date ((date gregorian))
-  (absolute-from-gregorian (to-list date)))
+  (absolute-from-gregorian (to-component-list date)))
 
 
 ;;; ISO Week date
-(defclass iso ()
+(defclass iso (date)
   ((year
     :initarg :year
     :accessor year
@@ -82,7 +88,7 @@
   (make-instance 'iso :year year :week week :day day))
 
 (defmethod absolute-from-date ((date iso))
-  (absolute-from-iso (to-list date)))
+  (absolute-from-iso (to-component-list date)))
 
 (defmethod print-object ((x iso) stream)
   (print-unreadable-object (x stream :type t)
@@ -96,7 +102,7 @@
   (make-instance 'julian :year year :month month :day day))
 
 (defmethod absolute-from-date ((date julian))
-  (absolute-from-julian (to-list date)))
+  (absolute-from-julian (to-component-list date)))
 
 
 ;;; Islamic date
@@ -106,7 +112,7 @@
   (make-instance 'islamic :year year :month month :day day))
 
 (defmethod absolute-from-date ((date islamic))
-  (absolute-from-islamic (to-list date)))
+  (absolute-from-islamic (to-component-list date)))
 
 
 ;;; Hebrew date
@@ -116,11 +122,11 @@
   (make-instance 'hebrew :year year :month month :day day))
 
 (defmethod absolute-from-date ((date hebrew))
-  (absolute-from-hebrew (to-list date)))
+  (absolute-from-hebrew (to-component-list date)))
 
 
 ;;; Mayan long count
-(defclass mayan-long-count ()
+(defclass mayan-long-count (date)
   ((baktun
     :initarg :baktun
     :accessor baktun
@@ -146,11 +152,11 @@
   (make-instance 'mayan-long-count
                  :baktun baktun :katun katun :tun tun :uinal uinal :kin kin))
 
-(defmethod to-list ((date mayan-long-count))
+(defmethod to-component-list ((date mayan-long-count))
   (list (baktun date) (katun date) (tun date) (uinal date) (kin date)))
 
 (defmethod absolute-from-date ((date mayan-long-count))
-  (absolute-from-mayan-long-count (to-list date)))
+  (absolute-from-mayan-long-count (to-component-list date)))
 
 (defmethod print-object ((x mayan-long-count) stream)
   (print-unreadable-object (x stream :type t)
@@ -158,7 +164,7 @@
 
 
 ;;; Mayan haab date
-(defclass mayan-haab ()
+(defclass mayan-haab (date)
   ((month
     :initarg :month
     :accessor month
@@ -171,11 +177,8 @@
 (defun make-mayan-haab (month day)
   (make-instance 'mayan-haab :month month :day day))
 
-(defmethod to-list ((date mayan-haab))
+(defmethod to-component-list ((date mayan-haab))
   (list (day date) (month date)))
-
-(defmethod absolute-from-date ((date mayan-haab))
-  (absolute-from-mayan-haab (to-list date)))
 
 (defmethod print-object ((x mayan-haab) stream)
   (print-unreadable-object (x stream :type t)
@@ -183,7 +186,7 @@
 
 
 ;;; Mayan tzolkin date
-(defclass mayan-tzolkin ()
+(defclass mayan-tzolkin (date)
   ((number
     :initarg :number
     :accessor num
@@ -196,11 +199,8 @@
 (defun make-mayan-tzolkin (number name)
   (make-instance 'mayan-tzolkin :number number :name name))
 
-(defmethod to-list ((date mayan-tzolkin))
+(defmethod to-component-list ((date mayan-tzolkin))
   (list (num date) (name date)))
-
-(defmethod absolute-from-date ((date mayan-tzolkin))
-  (absolute-from-mayan-tzolkin (to-list date)))
 
 (defmethod print-object ((x mayan-tzolkin) stream)
   (print-unreadable-object (x stream :type t)
@@ -213,7 +213,7 @@
   (make-instance 'french :year year :month month :day day))
 
 (defmethod absolute-from-date ((date french))
-  (absolute-from-french (to-list date)))
+  (absolute-from-french (to-component-list date)))
 
 
 ;;; Old Hindu solar
@@ -223,11 +223,11 @@
   (make-instance 'old-hindu-solar :year year :month month :day day))
 
 (defmethod absolute-from-date ((date old-hindu-solar))
-  (absolute-from-old-hindo-solar (to-list date)))
+  (absolute-from-old-hindu-solar (to-component-list date)))
 
 
 ;;; Old Hindu lunar
-(defclass old-hindu-lunar ()
+(defclass old-hindu-lunar (ymd)
   ((year
     :initarg :year
     :accessor year
@@ -249,18 +249,18 @@
   (make-instance 'old-hindu-lunar
                  :year year :month month :leap-month leap-month :day day))
 
-(defmethod to-list ((date old-hindu-lunar))
+(defmethod to-component-list ((date old-hindu-lunar))
   (list (month date) (leap-month date) (day date) (year date)))
 
 (defmethod absolute-from-date ((date old-hindu-lunar))
-  (absolute-from-old-hindu-lunar (to-list date)))
+  (absolute-from-old-hindu-lunar (to-component-list date)))
 
 (defmethod print-object ((x old-hindu-lunar) stream)
   (print-unreadable-object (x stream :type t)
     (format stream "~a-~2,'0d-~a-~2,'0d" (year x) (month x) (leap-month x) (day x))))
 
 
-;;; Create dates from calendrical function outputs
+;;; Create dates from calendrical function outputs (as defined in calendar.lisp)
 (defun to-date (lst &key type)
   (cond ((string-equal type "gregorian")
          (make-instance 'gregorian
@@ -320,35 +320,49 @@
                         :day        (nth 2 lst)))
         (t nil)))
 
-(defun make-date-from-list (lst &key calendar)
-  (to-date lst :type calendar))
+(defun make-date (lst &key calendar)
+  "Create an instance of a DATE class from a list LST of date components. The date components in LST must be ordered from largest calendar unit to smallest (e.g. YMD)"
+  ;; calendar.lisp orders date components as MDY, LST expects components to be 
+  ;; ordered from the largest unit to smallest: reordering components where 
+  ;; necessary
+  (let ((reordered-components
+         (cond ((member calendar 
+                        (list "gregorian" "julian" "islamic" "hebrew" "french" "old-hindu-solar" "iso") 
+                        :test #'string-equal)
+                (list (nth 1 lst) (nth 2 lst) (nth 0 lst)))
+               ((string-equal calendar "mayan-haab")
+                (list (nth 1 lst) (nth 0 lst)))
+               ((string-equal calendar "old-hindu-lunar")
+                (list (nth 1 lst) (nth 2 lst) (nth 3 lst) (nth 0 lst)))
+               (t lst))))
+    (to-date reordered-components :type calendar)))
 
 ;;; Convert absolute dates to calendar dates
-(defun date-from-absolute (absolute-date &key calendar)
-  "Convert absolute date to given calendar"
+(defun date-from-absolute (rd &key calendar)
+  "Convert absolute date RD to date representation given by CALENDAR"
   (to-date
    (cond ((string-equal calendar "gregorian")
-          (gregorian-from-absolute absolute-date))
+          (gregorian-from-absolute rd))
          ((string-equal calendar "iso")
-          (iso-from-absolute absolute-date))
+          (iso-from-absolute rd))
          ((string-equal calendar "julian")
-          (julian-from-absolute absolute-date))
+          (julian-from-absolute rd))
          ((string-equal calendar "islamic")
-          (islamic-from-absolute absolute-date))
+          (islamic-from-absolute rd))
          ((string-equal calendar "hebrew")
-          (hebrew-from-absolute absolute-date))
+          (hebrew-from-absolute rd))
          ((string-equal calendar "mayan-long-count")
-          (mayan-long-count-from-absolute absolute-date))
+          (mayan-long-count-from-absolute rd))
          ((string-equal calendar "mayan-haab")
-          (mayan-haab-from-absolute absolute-date))
+          (mayan-haab-from-absolute rd))
          ((string-equal calendar "mayan-tzolkin")
-          (mayan-tzolkin-from-absolute absolute-date))
+          (mayan-tzolkin-from-absolute rd))
          ((string-equal calendar "french")
-          (french-from-absolute absolute-date))
+          (french-from-absolute rd))
          ((string-equal calendar "old-hindu-solar")
-          (old-hindu-solar-from-absolute absolute-date))
+          (old-hindu-solar-from-absolute rd))
          ((string-equal calendar "old-hindu-lunar")
-          (old-hindu-lunar-from-absolute absolute-date)))
+          (old-hindu-lunar-from-absolute rd)))
    :type calendar))
 
 (defun convert-date (date &key calendar)
@@ -409,8 +423,8 @@
   (reverse (pairlis
             (seq 1 13)
             (list "Vendemiaire" "Brumaire" "Frimaire"
-                  "Nivose" "Pluviose" "Ventose"
-                  "Germinal" "Floreal" "Prairial"
+                  "Nivôse" "Pluviôse" "Ventôse"
+                  "Germinal" "Floréal" "Prairial"
                   "Messidor" "Thermidor" "Fructidor"
                   "Sansculottides"))))
 
@@ -432,13 +446,13 @@
 
 
 (defun get-value-from-key (key alist)
-  "Return the value associated with a given key"
+  "Return the value from an ALIST associated with a given KEY"
   (cdr (assoc key alist)))
 
 
 ;;; Generate output date strings
 (defgeneric display-string (date)
-  (:documentation "Create string representation from `date'"))
+  (:documentation "Create string representation from DATE"))
 
 (defmethod display-string ((date gregorian))
   (let ((month-name (get-value-from-key (month date) gregorian-months)))
@@ -485,8 +499,9 @@
 
 ;;; validate dates
 (defun today ()
+  "Return the current date as GREGORIAN-DATE"
   (multiple-value-bind (second minute hour day month year day-of-week dst-p tz)
-      (decode-universal-time (get-universal-time))
+      (get-decoded-time)
     (make-gregorian year month day)))
 
 (defgeneric get-components (date)
@@ -494,23 +509,23 @@
 
 (defmethod get-components ((date ymd))
   (make-array 3 :initial-contents (list (year date) (month date) (day date))
-                :element-type '(signed-byte 32)))
+              :element-type '(signed-byte 32)))
 
 (defmethod get-components ((date iso))
   (make-array 3 :initial-contents (list (year date) (week date) (day date))
-                :element-type '(signed-byte 32)))
+              :element-type '(signed-byte 32)))
 
 (defmethod get-components ((date mayan-long-count))
   (make-array 5 :initial-contents (list (baktun date) (katun date) (tun date) (uinal date) (kin date))
-                :element-type '(signed-byte 32)))
+              :element-type '(signed-byte 32)))
 
 (defmethod get-components ((date mayan-haab))
   (make-array 2 :initial-contents (list (month date) (day date))
-                :element-type '(signed-byte 32)))
+              :element-type '(signed-byte 32)))
 
 (defmethod get-components ((date mayan-tzolkin))
   (make-array 2 :initial-contents (list (num date) (name date))
-                :element-type '(signed-byte 32)))
+              :element-type '(signed-byte 32)))
 
 
 

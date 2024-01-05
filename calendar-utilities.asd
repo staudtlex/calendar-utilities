@@ -1,12 +1,3 @@
-(defpackage :calendar-utilities
-  (:nicknames #:cc)
-  (:use #:cl #:asdf)
-  (:export #:make-date-from-list
-           #:today
-           #:display-string
-           #:date-from-absolute
-           #:absolute-from-date))
-
 (defsystem "calendar-utilities"
   :description ""
   :version "0.5"
@@ -15,5 +6,6 @@
   :components ((:static-file "calendar-utilities.asd")
                (:static-file "LICENSE")
                (:static-file "README.md")
-               (:file "calendar")
+               (:file "package")
+               (:file "calendar" :depends-on ("package"))
                (:file "calendar-utilities" :depends-on ("calendar"))))
