@@ -19,8 +19,6 @@ indent: calendar-utilities.lisp
 test_with_quicklisp: 
 	sbcl --eval "(push #p\"../calendar-utilities/\" asdf:*central-registry*)" \
 		 --eval "(ql:quickload \"calendar-utilities\")" \
-		 --eval "(in-package :cl)" \
-		 --eval "(print (calcal:display-string (calcal:date-from-absolute (calcal:absolute-from-date (calcal:make-date (list 2024 01 01) :calendar \"gregorian\")) :calendar \"iso\")))" \
-		 --eval "(print (calcal:display-string (calcal:date-from-absolute (calcal:absolute-from-date (calcal::make-gregorian 2024 01 01)) :calendar \"iso\")))" \
+		 --eval "(print (let ((x (mapcar (lambda (cal) (calcal:display-string (calcal:date-from-absolute (calcal:absolute-from-date (calcal:today)) :calendar cal))) calcal::*supported-calendars*))) (format nil \"~{~a~%~}\" x)))" \
 		 --eval "(terpri)" \
 		 --quit

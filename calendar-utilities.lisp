@@ -17,13 +17,29 @@
 
 (in-package :calendar-utilities)
 
+;;; Helper functions
+(defun seq (from-value to-value)
+  "Return a sequence of consecutive integers, ranging from FROM-VALUE to TO-VALUE"
+  (if (> to-value from-value)
+      (let ((length (1+ (- to-value from-value))))
+        (loop :for n :below length :collect (+ from-value n)))
+      (let ((length (1+ (- from-value to-value))))
+        (loop :for n :below length :collect (- from-value n)))
+      ))
+
+(defun get-value-from-key (key alist)
+  "Return the value from an ALIST associated with a given KEY"
+  (cdr (assoc key alist)))
+
+(defun symbol-from-string (string &optional (package *package*)) 
+  "Locate a symbol whose name is STRING in a PACKAGE. STRING is always converted to upper-case. If a symbol is found in PACKAGE, the symbol returned, otherwise SYMBOL-FROM-STRING returns NIL. "
+  (find-symbol (string-upcase string) package))
+
+
 ;;; Generics
 ;;; convert date-object to input list for calendrical functions
 (defgeneric to-component-list (date)
   (:documentation "Extract the date components of DATE into a list. The order of the date components may differ what is shown when calling (PRINT DATE)."))
-
-(defun make-list-from-date (date)
-  (to-component-list date))
 
 ;;; convert calendar dates to absolute (fixed) dates
 (defgeneric absolute-from-date (date)
@@ -206,6 +222,7 @@
   (print-unreadable-object (x stream :type t)
     (format stream "~a ~a" (num x) (name x))))
 
+
 ;;; French revolutionary date
 (defclass french (ymd) ())
 
@@ -260,65 +277,88 @@
     (format stream "~a-~2,'0d-~a-~2,'0d" (year x) (month x) (leap-month x) (day x))))
 
 
+;;; Currently supported calendars
+(defparameter *supported-calendars* 
+  (list 
+   "gregorian" 
+   "iso" 
+   "julian" 
+   "islamic" 
+   "hebrew" 
+   "mayan-long-count" 
+   "mayan-haab" 
+   "mayan-tzolkin" 
+   "french" 
+   "old-hindu-solar" 
+   "old-hindu-lunar"))
+
+
 ;;; Create dates from calendrical function outputs (as defined in calendar.lisp)
-(defun to-date (lst &key type)
-  (cond ((string-equal type "gregorian")
-         (make-instance 'gregorian
-                        :year  (nth 2 lst)
-                        :month (nth 0 lst)
-                        :day   (nth 1 lst)))
-        ((string-equal type "julian")
-         (make-instance 'julian
-                        :year  (nth 2 lst)
-                        :month (nth 0 lst)
-                        :day   (nth 1 lst)))
-        ((string-equal type "islamic")
-         (make-instance 'islamic
-                        :year  (nth 2 lst)
-                        :month (nth 0 lst)
-                        :day   (nth 1 lst)))
-        ((string-equal type "hebrew")
-         (make-instance 'hebrew
-                        :year  (nth 2 lst)
-                        :month (nth 0 lst)
-                        :day   (nth 1 lst)))
-        ((string-equal type "french")
-         (make-instance 'french
-                        :year  (nth 2 lst)
-                        :month (nth 0 lst)
-                        :day   (nth 1 lst)))
-        ((string-equal type "old-hindu-solar")
-         (make-instance 'old-hindu-solar
-                        :year  (nth 2 lst)
-                        :month (nth 0 lst)
-                        :day   (nth 1 lst)))
-        ((string-equal type "iso")
-         (make-instance 'iso
-                        :year (nth 2 lst)
-                        :week (nth 0 lst)
-                        :day  (nth 1 lst)))
-        ((string-equal type "mayan-long-count")
-         (make-instance 'mayan-long-count
-                        :baktun (nth 0 lst)
-                        :katun  (nth 1 lst)
-                        :tun    (nth 2 lst)
-                        :uinal  (nth 3 lst)
-                        :kin    (nth 4 lst)))
-        ((string-equal type "mayan-haab")
-         (make-instance 'mayan-haab
-                        :month (nth 1 lst)
-                        :day   (nth 0 lst)))
-        ((string-equal type "mayan-tzolkin")
-         (make-instance 'mayan-tzolkin
-                        :number (nth 0 lst)
-                        :name   (nth 1 lst)))
-        ((string-equal type "old-hindu-lunar")
-         (make-instance 'old-hindu-lunar
-                        :year       (nth 3 lst)
-                        :month      (nth 0 lst)
-                        :leap-month (nth 1 lst)
-                        :day        (nth 2 lst)))
-        (t nil)))
+(defparameter *mdy-calendars* 
+  (list 
+   "gregorian" 
+   "julian" 
+   "islamic" 
+   "hebrew" 
+   "french" 
+   "old-hindu-solar"))
+
+(defun date-from-mdy-list (lst &key calendar)
+  (let ((calendar-symbol (symbol-from-string calendar :calendar-utilities)))
+    (destructuring-bind (m d y) lst
+      (make-instance calendar-symbol 
+                     :year y 
+                     :month m 
+                     :day d))))
+
+(defun date-from-iso-list (lst)
+  (destructuring-bind (week day year) lst
+    (make-instance 'iso
+                   :year year 
+                   :week week 
+                   :day day)))
+
+(defun date-from-mayan-long-count-list (lst)
+  (destructuring-bind (baktun katun tun uinal kin) lst
+    (make-instance 'mayan-long-count
+                   :baktun baktun
+                   :katun  katun
+                   :tun    tun
+                   :uinal  uinal
+                   :kin    kin)))
+
+(defun date-from-mayan-haab-list (lst)
+  (make-instance 'mayan-haab
+                 :month (second lst)
+                 :day   (first lst)))
+
+(defun date-from-mayan-tzolkin-list (lst)
+  (make-instance 'mayan-tzolkin
+                 :number (first lst)
+                 :name   (second lst)))
+
+(defun date-from-old-hindu-lunar-list (lst)
+  (destructuring-bind (month leap-month day year) lst
+    (make-instance 'old-hindu-lunar
+                   :year       year
+                   :month      month
+                   :leap-month leap-month
+                   :day        day)))
+
+(defun to-date (lst &key calendar)
+  (cond ((member calendar *mdy-calendars* :test #'string-equal)
+         (date-from-mdy-list lst :calendar calendar))
+        ((string-equal calendar "iso")
+         (date-from-iso-list lst))
+        ((string-equal calendar "mayan-long-count")
+         (date-from-mayan-long-count-list lst))
+        ((string-equal calendar "mayan-haab")
+         (date-from-mayan-haab-list lst))
+        ((string-equal calendar "mayan-tzolkin")
+         (date-from-mayan-tzolkin-list lst))
+        ((string-equal calendar "old-hindu-lunar")
+         (date-from-old-hindu-lunar-list lst))
+        (t (make-instance 'date))))
 
 (defun make-date (lst &key calendar)
   "Create an instance of a DATE class from a list LST of date components. The date components in LST must be ordered from largest calendar unit to smallest (e.g. YMD)"
@@ -326,16 +366,14 @@
   ;; ordered from the largest unit to smallest: reordering components where 
   ;; necessary
   (let ((reordered-components
-         (cond ((member calendar 
-                        (list "gregorian" "julian" "islamic" "hebrew" "french" "old-hindu-solar" "iso") 
-                        :test #'string-equal)
-                (list (nth 1 lst) (nth 2 lst) (nth 0 lst)))
+         (cond ((member calendar *mdy-calendars* :test #'string-equal)
+                (destructuring-bind (y m d) lst (list m d y)))
                ((string-equal calendar "mayan-haab")
-                (list (nth 1 lst) (nth 0 lst)))
+                (destructuring-bind (month day) lst (list day month)))
                ((string-equal calendar "old-hindu-lunar")
-                (list (nth 1 lst) (nth 2 lst) (nth 3 lst) (nth 0 lst)))
+                (destructuring-bind (y m leap-m d) lst (list m leap-m d y)))
                (t lst))))
-    (to-date reordered-components :type calendar)))
+    (to-date reordered-components :calendar calendar)))
 
 ;;; Convert absolute dates to calendar dates
 (defun date-from-absolute (rd &key calendar)
@@ -362,8 +400,9 @@
          ((string-equal calendar "old-hindu-solar")
           (old-hindu-solar-from-absolute rd))
          ((string-equal calendar "old-hindu-lunar")
-          (old-hindu-lunar-from-absolute rd)))
-   :type calendar))
+          (old-hindu-lunar-from-absolute rd))
+         (t (make-instance 'date)))
+   :calendar calendar))
 
 (defun convert-date (date &key calendar)
   (date-from-absolute (absolute-from-date date) :calendar calendar))
@@ -371,11 +410,6 @@
 
 ;;; Generate formatted date strings
 ;;; months
-(defun seq (from to)
-  ;; Generate a sequence of consecutive integers
-  (let ((length (1+ (- to from))))
-    (loop :for n :below length :collect (+ from n))))
-
 (defparameter gregorian-months
   (reverse (pairlis
             (seq 1 12)
@@ -428,6 +462,15 @@
                   "Messidor" "Thermidor" "Fructidor"
                   "Sansculottides"))))
 
+(defparameter french-months-ascii
+  (reverse (pairlis
+            (seq 1 13)
+            (list "Vendemiaire" "Brumaire" "Frimaire"
+                  "Nivose" "Pluviose" "Ventose"
+                  "Germinal" "Floreal" "Prairial"
+                  "Messidor" "Thermidor" "Fructidor"
+                  "Sansculottides"))))
+
 (defparameter old-hindu-solar-months
   (reverse (pairlis
             (seq 1 12)
@@ -445,14 +488,11 @@
                   "Pausha" "Magha" "Phalguna"))))
 
 
-(defun get-value-from-key (key alist)
-  "Return the value from an ALIST associated with a given KEY"
-  (cdr (assoc key alist)))
-
-
 ;;; Generate output date strings
 (defgeneric display-string (date)
   (:documentation "Create string representation from DATE"))
+
+(defparameter *use-ascii-month-names* nil)
 
 (defmethod display-string ((date gregorian))
   (let ((month-name (get-value-from-key (month date) gregorian-months)))
@@ -485,7 +525,10 @@
     (format nil "~d ~a" (num date) tzolkin-name)))
 
 (defmethod display-string ((date french))
-  (let ((month-name (get-value-from-key (month date) french-months)))
+  (let ((month-name (get-value-from-key (month date) 
+                                        (if (not *use-ascii-month-names*) 
+                                            french-months
+                                            french-months-ascii))))
     (format nil "~d ~a ~a" (day date) month-name (year date))))
 
 (defmethod display-string ((date old-hindu-solar))
@@ -497,13 +540,16 @@
     (format nil "~d ~a ~a" (day date) month-name (year date))))
 
 
-;;; validate dates
+;;; Create Gregorian date object instance from current date
 (defun today ()
   "Return the current date as GREGORIAN-DATE"
   (multiple-value-bind (second minute hour day month year day-of-week dst-p tz)
       (get-decoded-time)
     (make-gregorian year month day)))
 
+
+;;; Extract date components from date objects 
+;;; These functions are to be used for presetting date pickers
 (defgeneric get-components (date)
   (:documentation "Get components of a date as an array of integers"))
 
@@ -528,7 +574,8 @@
               :element-type '(signed-byte 32)))
 
 
-
+;;; Validate dates
+;;; These functions are to be used for validation of date picker selections
 (defun days-in-gregorian-month (month year)
   (let ((n (list 31 28 31 30 31 30 31 31 30 31 30 31)))
     (if (and (= month 2)
@@ -544,14 +591,14 @@
         29
         (nth (1- month) n))))
 
-(defmethod days-in-islamic-month (month year)
+(defun days-in-islamic-month (month year)
   (if (or (not (= (mod month 2) 0))
           (and (= month 12)
                (islamic-leap-year year)))
       30
       29))
 
-(defmethod days-in-hebrew-month (month year)
+(defun days-in-hebrew-month (month year)
   (if (or (member month (list 2 4 6 10 13))
           (and (= month 12)
                (not (hebrew-leap-year year)))
@@ -562,10 +609,9 @@
       29
       30))
 
-(defmethod days-in-french-month (month year)
-  (if (< month 13)
-      30
-      (if (french-leap-year year)
-          6
-          5)))
+(defun days-in-french-month (month year)
+  (cond ((< month 13) 30) 
+        ((french-leap-year year) 6)
+        (t 5)))
+
 

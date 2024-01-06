@@ -6,4 +6,6 @@
            #:today
            #:display-string
            #:date-from-absolute
-           #:absolute-from-date))
+           #:absolute-from-date
+           #:*supported-calendars*
+           #:*use-ascii-month-names*))
